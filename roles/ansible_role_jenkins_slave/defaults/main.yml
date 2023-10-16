@@ -1,0 +1,15 @@
+---
+jenkins_slave_hostname:
+jenkins_slave_http_port: 80
+jenkins_slave_url_prefix: ""
+jenkins_slave_master_url: "http://{{ jenkins_slave_hostname }}:{{ jenkins_slave_http_port }}{{ jenkins_slave_url_prefix }}"
+jenkins_slave_admin_username: "admin"
+jenkins_slave_admin_password: "admin"
+jenkins_slave_workspace: "/home/{{ jenkins_slave_user }}/workspace"
+jenkins_slave_retries: 60
+jenkins_slave_delay: 30
+jenkins_slave_timeout: 360
+jenkins_slave_usage: NORMAL
+jenkins_slave_labels: "dumb slave"
+jenkins_slave_description: "Dumb Slave"
+jenkins_slave_executors: 2

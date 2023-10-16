@@ -1,0 +1,23 @@
+#!groovy
+import org.jenkinsci.plugins.configfiles.*
+import org.jenkinsci.plugins.configfiles.json.JsonConfig
+
+def id = "{{ item.id }}"
+def name = "{{ item.name }}"
+def comment = "{{ item.comment }}"
+def fileContent = new File("{{ file_path }}").text
+def gcf = GlobalConfigFiles.get().getById(id)
+
+def addJSONConfig(String id, String name, String comment, String fileContent) {
+  GlobalConfigFiles.get().save(new JsonConfig(id, name, comment, fileContent))
+  println "Changed JSON config file provider"
+}
+
+def existingConfig = GlobalConfigFiles.get().getById(id)
+
+if (existingConfig == null
+    || existingConfig.name != name
+    || existingConfig.comment != comment
+    || existingConfig.content != fileContent) {
+  addJSONConfig(id, name, comment, fileContent)
+}

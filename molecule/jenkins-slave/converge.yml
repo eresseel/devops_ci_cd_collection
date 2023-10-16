@@ -1,0 +1,17 @@
+---
+- name: Converge
+  hosts: slave
+  collections:
+    - devops.devops_jenkins_collection
+  roles:
+    - role: ansible_role_jenkins_slave
+      vars:
+        jenkins_slave_hostname: "{{ hostvars[groups['master'][0]].inventory_hostname }}"
+        jenkins_slave_http_port: 8080
+        jenkins_slave_admin_username: "{{ secret_jenkins_ad_username | default('admin') }}"
+        jenkins_slave_admin_password: "{{ secret_jenkins_ad_password | default('admin') }}"
+        jenkins_slave_description: "{{ description | default('Dumb Slave') }}"
+        jenkins_slave_executors: "{{ executors | default(1) }}"
+        jenkins_slave_usage: "{{ slave_usage | default('NORMAL') }}"
+        jenkins_slave_labels: "{{ labels | default('devops') }}"
+        when: "'slave' in group_names"

@@ -1,0 +1,4 @@
+---
+jenkins_slave_user: "jenkins"
+workspace: "/home/{{ jenkins_slave_user }}/workspace"
+known_hosts_file: "/home/{{ jenkins_slave_user }}/.ssh/known_hosts"

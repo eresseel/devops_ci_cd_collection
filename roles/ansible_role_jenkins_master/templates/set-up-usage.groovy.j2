@@ -1,0 +1,15 @@
+#!groovy
+import jenkins.model.Jenkins
+
+def expectedUsage = "{{ jenkins_master_usage }}"
+
+def setUsageIfNeeded(expectedUsage) {
+    def currentUsage = Jenkins.instance.getMode().toString()
+    if (currentUsage != expectedUsage) {
+      Jenkins.instance.setMode(hudson.model.Node.Mode."${expectedUsage}")
+        println "Changed usage"
+    }
+}
+
+setUsageIfNeeded(expectedUsage)
+

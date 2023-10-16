@@ -1,0 +1,98 @@
+---
+- name: Create Jenkins slave user
+  become: true
+  ansible.builtin.user:
+    name: "{{ jenkins_slave_user }}"
+    comment: "Jenkins worker aka slave"
+    groups: docker
+    append: yes
+    createhome: yes
+    move_home: yes
+    home: "/home/{{ jenkins_slave_user }}"
+
+- name: Ensure workspace directories exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ jenkins_slave_user }}"
+    group: "jenkins"
+    mode: 0755
+  with_items:
+    - "{{ jenkins_slave_workspace }}"
+    - "/home/{{ jenkins_slave_user }}/bin"
+
+- name: Wait for Jenkins to start up
+  ansible.builtin.uri:
+    url: "{{ jenkins_slave_master_url }}/cli/"
+    status_code: 200,403
+  changed_when: false
+  register: result
+  until: result.status in [200, 403]
+  retries: "{{ jenkins_slave_retries }}"
+  delay: "{{ jenkins_slave_delay }}"
+
+- name: Configure JNLP slaves for Jenkins master
+  vars:
+    slave:
+      name: "{{ ansible_hostname }}"
+      address: "{{ ansible_fqdn | default(ansible_default_ipv4.address) }}"
+      user: "{{ jenkins_slave_user }}"
+      workspace: "{{ jenkins_slave_workspace }}"
+      labels: "{{ jenkins_slave_labels }}"
+      mode: "{{ jenkins_slave_usage }}"
+      executors: "{{ jenkins_slave_executors }}"
+      description: "{{ jenkins_slave_description }}"
+  community.general.jenkins_script:
+    script: "{{ lookup('template', 'register-jnlp-slave.groovy.j2') }}"
+    url: "{{ jenkins_slave_master_url }}"
+    user: "{{ jenkins_slave_admin_username }}"
+    password: "{{ jenkins_slave_admin_password }}"
+  register: slave_output
+
+- name: Gather slave secret from the Jenkins master
+  vars:
+    slave:
+      name: "{{ ansible_hostname }}"
+      address: "{{ ansible_fqdn }}"
+      user: "{{ jenkins_slave_user }}"
+      workspace: "{{ jenkins_slave_workspace }}"
+  community.general.jenkins_script:
+    script: "{{ lookup('template', 'get-slave-secret.groovy.j2') }}"
+    url: "{{ jenkins_slave_master_url }}"
+    user: "{{ jenkins_slave_admin_username }}"
+    password: "{{ jenkins_slave_admin_password }}"
+  register: slave_secret
+  notify:
+    - Restart Jenkins JNLP slave
+
+- name: Gather Jenkins slave agent files
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ item }}"
+    dest: "/home/{{ jenkins_slave_user }}/bin/slave.jar"
+    force_basic_auth: yes
+    url_username: "{{ jenkins_slave_admin_username }}"
+    url_password: "{{ jenkins_slave_admin_password }}"
+    owner: jenkins
+    group: jenkins
+    mode: 0755
+  with_items:
+    - "{{ jenkins_slave_master_url }}/jnlpJars/slave.jar"
+  notify:
+    - Restart Jenkins JNLP slave
+
+- name: Create Jenkins slave service init-script
+  become: true
+  vars:
+    master: "{{ jenkins_slave_master_url }}"
+    slave: "{{ ansible_hostname }}"
+    jnlp_url: "{{ master }}/computer/{{ slave }}/slave-agent.jnlp"
+  ansible.builtin.template:
+    src: jenkins-jnlp-slave.sh.j2
+    dest: /etc/init.d/jenkins-slave
+    owner: root
+    group: root
+    mode: 0755
+  notify:
+    - Restart Jenkins JNLP slave

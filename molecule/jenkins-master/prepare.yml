@@ -1,0 +1,444 @@
+---
+- name: Installing Build tools
+  hosts: master
+  become: true
+  collections:
+    - devops.devops_jenkins_collection
+  pre_tasks:
+    - name: Install needed packages from APT repository
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      with_items:
+        - git
+        - tar
+        - unzip
+        - curl
+        - wget
+        - openjdk-11-jre
+
+- name: Setup Jenkins Master
+  hosts: master
+  become: true
+  roles:
+    - role: geerlingguy.jenkins
+      vars:
+        # https://github.com/geerlingguy/ansible-role-jenkins/issues/378
+        # workaround is to add the jenkins new GPG key
+        # because jenkins changed the GPG key name
+        jenkins_repo_key_url: "https://pkg.jenkins.io/debian/jenkins.io-2023.key"
+        jenkins_hostname: "{{ hostvars[groups['master'][0]].inventory_hostname }}"
+        jenkins_url_prefix: ""
+        jenkins_home: /home/jenkins
+        jenkins_version: "2.332"
+        jenkins_admin_username: admin
+        jenkins_admin_password: admin
+        jenkins_connection_delay: 3
+        jenkins_connection_retries: 30
+
+- name: Setup Jenkins Master
+  hosts: master
+  become: true
+  collections:
+    - devops.devops_jenkins_collection
+  roles:
+    - role: ansible_role_jenkins_master
+      vars:
+        bitbucket_url: "http://atlassian.vagrant.dev:7990/bitbucket"
+        pipeline_git_baseurl: "ssh://git@bitbucket.atlassian.vagrant.dev:7999/devops"
+        jenkins_master_plugins:
+          - name: 'ace-editor'
+            version: '1.1'
+          - name: 'apache-httpcomponents-client-4-api'
+            version: '4.5.13-138.v4e7d9a_7b_a_e61'
+          - name: 'authentication-tokens'
+            version: '1.4'
+          - name: 'authorize-project'
+            version: '1.3.0'
+          - name: 'blueocean-autofavorite'
+            version: '1.2.3'
+          - name: 'blueocean-bitbucket-pipeline'
+            version: '1.24.3'
+          - name: 'blueocean-commons'
+            version: '1.24.3'
+          - name: 'blueocean-config'
+            version: '1.24.3'
+          - name: 'blueocean-core-js'
+            version: '1.24.3'
+          - name: 'blueocean-dashboard'
+            version: '1.24.3'
+          - name: 'blueocean-display-url'
+            version: '2.2.0'
+          - name: 'blueocean-events'
+            version: '1.24.3'
+          - name: 'blueocean-github-pipeline'
+            version: '1.24.3'
+          - name: 'blueocean-git-pipeline'
+            version: '1.24.3'
+          - name: 'blueocean-i18n'
+            version: '1.24.3'
+          - name: 'blueocean-jira'
+            version: '1.24.3'
+          - name: 'blueocean-jwt'
+            version: '1.24.3'
+          - name: 'blueocean-personalization'
+            version: '1.24.3'
+          - name: 'blueocean-pipeline-api-impl'
+            version: '1.24.3'
+          - name: 'blueocean-pipeline-editor'
+            version: '1.24.3'
+          - name: 'blueocean-pipeline-scm-api'
+            version: '1.24.3'
+          - name: 'blueocean-rest-impl'
+            version: '1.24.3'
+          - name: 'blueocean-rest'
+            version: '1.24.3'
+          - name: 'blueocean'
+            version: '1.24.3'
+          - name: 'blueocean-web'
+            version: '1.24.3'
+          - name: 'bouncycastle-api'
+            version: '2.27'
+          - name: 'branch-api'
+            version: '2.5.5'
+          - name: 'cloudbees-bitbucket-branch-source'
+            version: '2.9.6'
+          - name: 'cloudbees-folder'
+            version: '6.15'
+          - name: 'command-launcher'
+            version: '1.2'
+          - name: 'config-file-provider'
+            version: '3.7.0'
+          - name: 'credentials-binding'
+            version: '1.23'
+          - name: 'credentials'
+            version: '2.3.14'
+          - name: 'display-url-api'
+            version: '2.3.3'
+          - name: 'docker-commons'
+            version: '1.16'
+          - name: 'docker-workflow'
+            version: '1.23'
+          - name: 'durable-task'
+            version: '507.v050055d0cb_dd'
+          - name: 'favorite'
+            version: '2.3.1'
+          - name: 'git-client'
+            version: '3.5.1'
+          - name: 'github-api'
+            version: '1.116'
+          - name: 'github-branch-source'
+            version: '2.9.3'
+          - name: 'github'
+            version: '1.32.0'
+          - name: 'gitlab-api'
+            version: '1.0.6'
+          - name: 'gitlab-branch-source'
+            version: '1.5.3'
+          - name: 'git-server'
+            version: '1.9'
+          - name: 'git'
+            version: '4.5.1'
+          - name: 'handlebars'
+            version: '3.0.8'
+          - name: 'handy-uri-templates-2-api'
+            version: '2.1.8-22.v77d5b_75e6953'
+          - name: 'htmlpublisher'
+            version: '1.14'
+          - name: 'jackson2-api'
+            version: '2.12.0'
+          - name: 'javax-activation-api'
+            version: '1.2.0-2'
+          - name: 'javax-mail-api'
+            version: '1.6.2-5'
+          - name: 'jaxb'
+            version: '2.3.0'
+          - name: 'jdk-tool'
+            version: '1.0'
+          - name: 'jenkins-design-language'
+            version: '1.24.3'
+          - name: 'jira'
+            version: '3.0.14'
+          - name: 'job-dsl'
+            version: '1.77'
+          - name: 'jquery-detached'
+            version: '1.2.1'
+          - name: 'jsch'
+            version: '0.1.55.2'
+          - name: 'junit'
+            version: '1.29'
+          - name: 'kubernetes-client-api'
+            version: '4.11.1'
+          - name: 'kubernetes-credentials'
+            version: '0.7.0'
+          - name: 'kubernetes'
+            version: '1.28.4'
+          - name: 'ldap'
+            version: '2.2'
+          - name: 'lockable-resources'
+            version: '2.7'
+          - name: 'mailer'
+            version: '1.32.1'
+          - name: 'matrix-auth'
+            version: '2.6.4'
+          - name: 'matrix-project'
+            version: '1.18'
+          - name: 'mercurial'
+            version: '2.8'
+          - name: 'metrics'
+            version: '4.0.2.6'
+          - name: 'momentjs'
+            version: '1.1.1'
+          - name: 'okhttp-api'
+            version: '3.14.9'
+          - name: 'pipeline-build-step'
+            version: '2.11'
+          - name: 'pipeline-graph-analysis'
+            version: '1.10'
+          - name: 'pipeline-input-step'
+            version: '2.11'
+          - name: 'pipeline-milestone-step'
+            version: '1.3.1'
+          - name: 'pipeline-model-api'
+            version: '1.7.2'
+          - name: 'pipeline-model-declarative-agent'
+            version: '1.1.1'
+          - name: 'pipeline-model-definition'
+            version: '1.6.0'
+          - name: 'pipeline-model-extensions'
+            version: '1.7.2'
+          - name: 'pipeline-rest-api'
+            version: '2.13'
+          - name: 'pipeline-stage-step'
+            version: '2.3'
+          - name: 'pipeline-stage-tags-metadata'
+            version: '1.6.0'
+          - name: 'pipeline-stage-view'
+            version: '2.13'
+          - name: 'plain-credentials'
+            version: '1.7'
+          - name: 'pubsub-light'
+            version: '1.13'
+          - name: 'resource-disposer'
+            version: '0.20'
+          - name: 'role-strategy'
+            version: '3.1'
+          - name: 'scm-api'
+            version: '2.6.4'
+          - name: 'script-security'
+            version: '1.75'
+          - name: 'snakeyaml-api'
+            version: '1.27.0'
+          - name: 'sonar'
+            version: '2.13'
+          - name: 'sse-gateway'
+            version: '1.21'
+          - name: 'ssh-credentials'
+            version: '1.18.1'
+          - name: 'sshd'
+            version: '3.0.3'
+          - name: 'structs'
+            version: '324.va_f5d6774f3a_d'
+          - name: 'thinBackup'
+            version: '1.10'
+          - name: 'token-macro'
+            version: '2.13'
+          - name: 'trilead-api'
+            version: '1.67.vc3938a_35172f'
+          - name: 'variant'
+            version: '1.3'
+          - name: 'workflow-aggregator'
+            version: '2.6'
+          - name: 'workflow-api'
+            version: '2.40'
+          - name: 'workflow-basic-steps'
+            version: '2.19'
+          - name: 'workflow-cps-global-lib'
+            version: '2.15'
+          - name: 'workflow-cps'
+            version: '2.87'
+          - name: 'workflow-durable-task-step'
+            version: '2.35'
+          - name: 'workflow-job'
+            version: '2.40'
+          - name: 'workflow-multibranch'
+            version: '2.21'
+          - name: 'workflow-scm-step'
+            version: '408.v7d5b_135a_b_d49'
+          - name: 'workflow-step-api'
+            version: '639.v6eca_cd8c04a_a_'
+          - name: 'workflow-support'
+            version: '3.7'
+          - name: 'ws-cleanup'
+            version: '0.38'
+        jenkins_master_matrix_authorization_strategy:
+          - user_or_group: 'admin'
+            permissions:
+              - 'hudson.model.Hudson.Administer'
+          - user_or_group: 'bela'
+            permissions:
+              - 'hudson.model.Hudson.Read'
+              - 'hudson.model.Item.Read'
+        jenkins_master_access_control_for_builds:
+          - authenticator_type: 'GlobalQueueItemAuthenticator'
+            strategy: 'SystemAuthorizationStrategy'
+          - authenticator_type: 'GlobalQueueItemAuthenticator'
+            strategy: 'AnonymousAuthorizationStrategy'
+        jenkins_master_secret_text_credentials:
+          - id: secret_text_id_need_to_update
+            secret: "secret_text_token"
+            description: 'secret text description'
+        jenkins_master_secret_file_credentials:
+          - id: 'secret_file_id_need_to_update'
+            description: 'secret file description'
+            file: 'files/secret.file'
+        jenkins_master_usr_pw_credentials:
+          - id: usr_pw_id_need_to_update
+            username: foo
+            password: bar
+            description: "usr_pw_description"
+        jenkins_master_ssh_credentials:
+          - id: sjenkins
+            username: sjenkins
+            content_key_pub: |
+              ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDgKKLG7dCxbspNlmcdbJv9Viqw09gLdR9sxNglJtVav8pRqUSB/cwxvGnx0djgk14Yqk/ZLcVqIiyDHgt3WbwSLhEtjhv55+XvPcRj3lflQrtI3k4rbd/FcDRYTni9bccq+B5ZrTSjIoLhMBjMKJgRKMLllBjRWncKwl0paz2GiBZ/vreIL7a+UNokSSn1SonxPDuO6kCBJDbm8GunqWqc/3403lw4KH/wUBe4oSMl6qV8XmKelu2U4yh22dBLm4m0t1nd61L1V9noCZD2AXt+Ey/Lfk1/2RfjwZfyWNzLdjNG/cBPa9bRepI4SK0QIOy4l3tyF90k+poxrR+hkdgF kerb3rosz@kali
+            content_key: |
+              -----BEGIN RSA PRIVATE KEY-----
+              MIIEpAIBAAKCAQEA4Ciixu3QsW7KTZZnHWyb/VYqsNPYC3UfbMTYJSbVWr/KUalE
+              gf3MMbxp8dHY4JNeGKpP2S3FaiIsgx4Ld1m8Ei4RLY4b+efl7z3EY95X5UK7SN5O
+              K23fxXA0WE54vW3HKvgeWa00oyKC4TAYzCiYESjC5ZQY0Vp3CsJdKWs9hogWf763
+              iC+2vlDaJEkp9UqJ8Tw7jupAgSQ25vBrp6lqnP9+NN5cOCh/8FAXuKEjJeqlfF5i
+              npbtlOModtnQS5uJtLdZ3etS9VfZ6AmQ9gF7fhMvy35Nf9kX48GX8ljcy3YzRv3A
+              T2vW0XqSOEitECDsuJd7chfdJPqaMa0foZHYBQIDAQABAoIBAQDOLLIjlKOKP6P1
+              nyvyxW3oovObNw6U40JnMdq4uTIuSQ+W8sCfa8f/yxQLJv96+DDpMOVGlbHpf8s/
+              Qkg7m56/ff2wz+/teR1lYoObc+uWZD2MtWRiz6mtmRmcS3kEis9RN2v7AbPThK+q
+              3ilAxumvhrVUolX9YV7y13kG2qt5a0OBL7RrksPn2UwmXWgOQCR1UsIg4UWcndyU
+              gfnZ7EAit4SCD2djl5nqh/oXVLKff4G2GwsK1UD9NN6DZqpjFXchzuHk8MoGdnZt
+              o8zif28xPDJf33AcUFbqIRmRDRxcrosX71E8o2VEOQhwbFSgKXCbLfmESuOkjZgE
+              YCLC6R4hAoGBAPjW7YgIH0IZI+k7uAmGxZCIDvollDB8oh17GxKfeOiVq3M2X7H2
+              7SUhGoiFDNa8AruDq3ybm8KBNU0tpQ9VoLV8Zse8jwQ7qWk0Y9xe+ygdC2lRD2Pu
+              ZWnj3tK/3mAzqQYotQ639r1wpQju/JAwGcBJxzIl+NpVIwuLqr53ELKJAoGBAOab
+              5alfdbvvhXA3LMzJLorObk7SDhRXaQh8uJT175BVF0F/ImLXx+mvBbPUcNL9PU01
+              +59BF08hmeOGGhRrCco65ZRX/XLQhxsSGQhTPhbMUqeFrPbT/rOblQCEerXEEDGN
+              5lSCAxUf3Q4Ef4ry6wR5qGRdtuKjvJzC2GB/wwqdAoGAY2VmqAmmgr6MC6PhFV0S
+              GXNfmCfek6eVEfWUkNHGeBEg1PqJKwsZGtWoRZPv1u5uoPwtSa7WftEhu1xaLE/l
+              y9iPLYVyExzJxM46fVIrPJCteDn6zc3yEGQHI2OkrgS0pVMpT2HIW09dfL4JgIbW
+              ImrV+IAWcQ/E2d3GLCJfNxECgYEAmGao1VFH7maxqeJc0g2Wm5cnISICugC2YiyC
+              k7cgliMV1mwdnnL6I/5N53VbBqTjUVZ+rtWGgP40xD+IlrvSYXqg5HNuBOW4k/RW
+              5MCWhNyNNzbJgunBJpOIWiozKlKjXQxpDqpJPTmsjin83CgDlxaLaaDhT1BkQrkl
+              5Egq7qUCgYAhEIXkclkuvjVSJ1vRtOrsyAw4xpnyV0LhzPspUzZDXxpY4vtvvEvj
+              IUDsZjeh87nlv7QllLOD6O9KffUnsml7ATKC6WoKcVhoQGQXnta5Jlj69P4DpEEK
+              170yPdiUP86+JUzoVZH6Clm4opayCtL5zxKL2puMXv/mdPehUpbAig==
+              -----END RSA PRIVATE KEY-----
+        jenkins_master_bitbucket_endpoint:
+          - display_name: "foo-no-change"
+            server_url: "http://foobar.com:7990"
+            call_can_merge: true
+            call_changes: true
+            manage_hooks: true
+            credentials_id: "usr_pw_id"
+            webhook_implementation: 'PLUGIN'  # NATIVE
+        jenkins_master_bitbucket_organization_folders:
+          - name: 'OFTEST-no-change'
+            display_name: 'OFTEST-no-change'
+            bitbucket_url: "{{ bitbucket_url }}"
+            project_key: 'SP'
+            scan_credentials: 'bitbucket_admin'
+            checkout_credentials: 'sjenkins'
+            bitbucket_ssh_port: 7999
+            bitbucket_server_name: 'foo'
+            project_based_security: []
+            pipeline_libraries: []
+          - name: 'ORG-FOLD-update'
+            display_name: 'ORG-FOLD-update'
+            bitbucket_url: "{{ bitbucket_url }}"
+            project_key: 'ORG-FOLD'
+            scan_credentials: 'bitbucket_admin'
+            checkout_credentials: 'sjenkins'
+            bitbucket_ssh_port: 7999
+            bitbucket_server_name: 'foo'
+            project_based_security:
+              - user_or_group: 'admin'
+                permissions:
+                  - 'hudson.model.Hudson.Administer'
+            pipeline_libraries:
+              - name: 'korte-pipeline-library'
+                git_url: "{{ pipeline_git_baseurl }}/korte-pipeline-library.git"
+                credentials: 'sjenkins'
+                default_version: 'master'
+                implicit: true
+        jenkins_master_hostname: "{{ hostvars[groups['master'][0]].inventory_hostname }}"
+        jenkins_master_admin_address: "foo@bar.com"
+        jenkins_master_global_xml_configs:
+          - id: 'foo-bar-config-xml-no-change'
+            name: 'foo-bar-config-xml-no-change'
+            comment: 'Foo Bar configuration no change'
+            file: 'files/foo-bar-settings.xml'
+          - id: 'foo-bar-config-xml-update'
+            name: 'foo-bar-config-xml-update'
+            comment: 'Foo Bar configuration update'
+            file: 'files/foo-bar-settings.xml'
+        jenkins_master_smtp_server: 'foo-bar.com'
+        jenkins_master_maven_installations:
+          - name: 'MVN3_no_change'
+            version: '3.3.9'
+          - name: 'MVN3_update'
+            version: '3.2.9'
+        jenkins_master_oracle_jdk_installations:
+          - version: 8-update
+            default: true
+          - version: 7-no-change
+            default: true
+        jenkins_master_global_properties_environment_variables:
+          - name: 'FOO_BAR_no_change'
+            value: "http://foobar/repository/foobar-release/"
+          - name: 'FOO_BAR_update'
+            value: "http://foobar/repository/foobar-release/"
+        jenkins_master_global_shared_libraries:
+          - name: 'updated-pipeline-library'
+            git_url: "{{ pipeline_git_baseurl }}/update-pipeline-library.git"
+            credentials: 'usr_pw_id_need_to_update'
+            default_version: 'develop'
+            load_implicitly: true
+          - name: 'no-change-pipeline-library'
+            git_url: "{{ pipeline_git_baseurl }}/no-change-pipeline-library.git"
+            credentials: 'sjenkins'
+            default_version: 'no-change'
+        jenkins_master_global_json_configs:
+          - id: 'foo-bar-no-change'
+            name: 'foo-bar-no-change'
+            comment: 'Configurations for the NAVSRV pipeline no change'
+            file: 'files/foo-bar-settings.json'
+          - id: 'foo-bar-update'
+            name: 'foo-bar-update'
+            comment: 'Configurations for the NAVSRV pipeline update'
+            file: 'files/foo-bar-settings.json'
+        jenkins_master_global_maven_configs:
+          - id: 'foo-bar-settings-no-change'
+            name: 'foo-bar-settings-no-change'
+            comment: 'Foo Bar maven settings'
+            file: 'files/foo-bar-settings.xml'
+            server_credentials:
+              - server_id: 'snapshot'
+                credential_id: 'usr_pw_id'
+              - server_id: 'release'
+                credential_id: 'usr_pw_id'
+          - id: 'foo-bar-settings-update'
+            name: 'foo-bar-settings-update'
+            comment: 'Foo Bar maven settings'
+            file: 'files/foo-bar-settings.xml'
+            server_credentials:
+              - server_id: 'snapshot'
+                credential_id: 'usr_pw_id'
+              - server_id: 'release'
+                credential_id: 'usr_pw_id'
+        jenkins_master_backup_configuration:
+          - name: "backup config"
+            path: "/home/jenkins/jenkins_master_backup"
+            cron: "0 0 * * 1"
+            max_backup_nuber: 2
+            timeout: 1
+            backup_result: false
+            backup_next_build_number: false
+            move_old_backup_to_zip: false

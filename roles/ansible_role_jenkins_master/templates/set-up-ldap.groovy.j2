@@ -1,0 +1,53 @@
+#!groovy
+import jenkins.model.Jenkins
+import hudson.security.LDAPSecurityRealm
+import hudson.security.LDAPSecurityRealm.CacheConfiguration
+import hudson.security.LDAPSecurityRealm.EnvironmentProperty
+import hudson.util.Secret
+import org.jenkinsci.plugins.*
+import jenkins.security.plugins.ldap.*
+
+String server = "{{ jenkins_master_ldap.server }}"
+String rootDN = "{{ jenkins_master_ldap.root_dn }}"
+String userSearchBase = "{{ jenkins_master_ldap.user_search_base }}"
+String userSearch = "{{ jenkins_master_ldap.user_search }}"
+String groupSearchBase = "{{ jenkins_master_ldap.group_search_base }}"
+String groupSearchFilter = "{{ jenkins_master_ldap.group_search_filter }}"
+String groupMembershipFilter = "{{ jenkins_master_ldap.group_membership_filter }}"
+String managerDN = "{{ jenkins_master_ldap.manager_dn }}"
+Secret managerPasswordSecret = Secret.fromString("{{ jenkins_master_ldap.manager_password | replace('$', '\$') }}")
+
+boolean inhibitInferRootDN = false
+boolean disableMailAddressResolver = false
+String displayNameAttributeName = 'displayname'
+String mailAddressAttributeName = 'mail'
+
+LDAPGroupMembershipStrategy groupMembershipStrategy = new FromGroupSearchLDAPGroupMembershipStrategy(groupMembershipFilter)
+CacheConfiguration cache = null
+EnvironmentProperty[] environmentProperties = null
+IdStrategy userIdStrategy = null
+IdStrategy groupIdStrategy = null
+
+SecurityRealm ldap_realm = new LDAPSecurityRealm(
+  server,
+  rootDN,
+  userSearchBase,
+  userSearch,
+  groupSearchBase,
+  groupSearchFilter,
+  groupMembershipStrategy,
+  managerDN,
+  managerPasswordSecret,
+  inhibitInferRootDN,
+  disableMailAddressResolver,
+  cache,
+  environmentProperties,
+  displayNameAttributeName,
+  mailAddressAttributeName,
+  userIdStrategy,
+  groupIdStrategy
+)
+
+def jenkins = Jenkins.instance
+jenkins.setSecurityRealm(ldapRealm)
+jenkins.save()

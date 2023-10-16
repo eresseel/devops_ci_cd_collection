@@ -1,0 +1,34 @@
+#!groovy
+import hudson.tasks.Maven.MavenInstallation
+
+def jenkins = Jenkins.instance
+def mavenList = jenkins.getExtensionList(hudson.tasks.Maven.DescriptorImpl.class)[0]
+List<MavenInstallation> mavenSettingList = []
+
+def addMavenSetting(def mavenSettingList, def name, def version) {
+  mavenSettingList.add(new MavenInstallation(name, version, []))
+}
+
+def name = "{{ item.name }}"
+def version = "{{ item.version }}"
+def mavenInstallationPath = "/opt/apache-maven-${version}"
+
+def shouldChangeInstallation = !mavenList.installations.toString()
+  .contains("MavenInstallation[${name}]")
+
+if (mavenList.installations.size() == 0 || shouldChangeInstallation) {
+  addMavenSetting(mavenSettingList, name, mavenInstallationPath)
+  println "Changed Maven installations"
+}
+
+mavenList.installations.each { installation ->
+  if (installation.name == name && installation.home != mavenInstallationPath) {
+    addMavenSetting(mavenSettingList, name, mavenInstallationPath)
+    println "Changed Maven installations"
+  } else {
+    addMavenSetting(mavenSettingList, installation.name, installation.home)
+  }
+}
+
+mavenList.installations = mavenSettingList
+mavenList.save()

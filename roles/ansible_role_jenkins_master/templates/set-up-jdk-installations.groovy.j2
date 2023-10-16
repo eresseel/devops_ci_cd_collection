@@ -1,0 +1,17 @@
+#!groovy
+import hudson.model.JDK.DescriptorImpl
+
+def descriptor = ExtensionList.lookupSingleton(JDK.DescriptorImpl.class)
+def jdks = descriptor.getInstallations()
+def version = "{{ item.version | default(jdk) }}"
+def jdkName = "JDK${version}"
+def jdkInstallationPath = "/usr/lib/jvm/java-${version}-oracle"
+
+if (!jdks.toString().contains("JDK[${jdkName}]")) {
+  jdks += new JDK(jdkName, jdkInstallationPath)
+  println "Changed JDK installations"
+}
+
+descriptor.setInstallations(jdks as JDK[])
+
+Jenkins.instance.save()

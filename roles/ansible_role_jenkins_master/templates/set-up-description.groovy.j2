@@ -1,0 +1,14 @@
+#!groovy
+import jenkins.model.Jenkins
+
+def expectedDescription = "{{ jenkins_master_description }}"
+
+def setJenkinsDescription(description) {
+    def actualDescription = Jenkins.instance.getSystemMessage()
+    if (actualDescription != expectedDescription) {
+        Jenkins.instance.setSystemMessage(description)
+        println "Changed description"
+    }
+}
+
+setJenkinsDescription(expectedDescription)

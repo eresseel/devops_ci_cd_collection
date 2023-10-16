@@ -1,0 +1,46 @@
+#!groovy
+import jenkins.model.Jenkins
+import hudson.plugins.sonar.SonarGlobalConfiguration
+import hudson.plugins.sonar.SonarInstallation
+
+def inst = Jenkins.instance
+def desc = inst.getDescriptor(SonarGlobalConfiguration.class)
+
+def existingInstallations = desc.getInstallations()
+def newInstallations = []
+boolean isNewOrModified = true
+
+existingInstallations.each { existingInst ->
+  if (existingInst.name == "{{ item.name }}") {
+    if (existingInst.serverUrl == "{{ item.server_url }}"
+        && existingInst.credentialsId == "{{ item.credential_id }}") {
+      newInstallations << existingInst
+      isNewOrModified = false
+    }
+  } else {
+    newInstallations << existingInst
+  }
+}
+
+if (isNewOrModified) {
+  String sonarName = "{{ item.name }}"
+  String sonarUrl = "{{ item.server_url }}"
+  String sonarCredentialsId = "{{ item.credential_id }}"
+
+  def newInst = new SonarInstallation(
+    sonarName,
+    sonarUrl,
+    sonarCredentialsId,
+    null, // serverAuthenticationToken
+    null, // webhookSecretId
+    null, // mojoVersion
+    null, // additionalProperties
+    null, // additionalAnalysisProperties
+    null  // triggers
+  )
+  newInstallations << newInst
+
+  desc.setInstallations(newInstallations as SonarInstallation[])
+  println "Changed Sonar servers"
+  desc.save()
+}
