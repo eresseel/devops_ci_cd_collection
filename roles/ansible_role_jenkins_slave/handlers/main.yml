@@ -1,0 +1,7 @@
+---
+- name: Restart Jenkins JNLP slave
+  become: true
+  ansible.builtin.service:
+    name: jenkins-slave
+    enabled: yes
+    state: restarted

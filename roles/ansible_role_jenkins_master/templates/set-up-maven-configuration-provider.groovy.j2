@@ -1,0 +1,49 @@
+#!groovy
+import org.jenkinsci.plugins.configfiles.GlobalConfigFiles
+import org.jenkinsci.plugins.configfiles.maven.MavenSettingsConfig
+import org.jenkinsci.plugins.configfiles.maven.security.ServerCredentialMapping
+
+def id = "{{ item.id }}"
+def name = "{{ item.name }}"
+def comment = "{{ item.comment }}"
+def content = '''{{ lookup('file', item.file) }}'''
+def globalConfigFile = GlobalConfigFiles.get().getById(id)
+def serverCredentials = []
+{% for server_credential in item.server_credentials %}
+  serverCredentials << new ServerCredentialMapping("{{ server_credential.server_id }}", "{{ server_credential.credential_id }}")
+{% endfor %}
+
+def addMavenSetting(def id, def name, def comment, def file, def serverCredentials) {
+  GlobalConfigFiles.get().save(new MavenSettingsConfig(id, name, comment, file, true, serverCredentials))
+  println "Changed Maven config file provider"
+}
+
+def serverCredentialsNeedChanging(def actualCredentials, def expectedCredentials) {
+  def isChanged = false
+
+  if (actualCredentials.size() != expectedCredentials.size()) {
+    isChanged = true
+  }
+
+  // actualCredentials looks for a item in expectedCredentials
+  // for each element, and if it doesn't find one, a change is required
+  actualCredentials.each() { actualCredentialsItem ->
+    if((expectedCredentials.find() { expectedCredentialsItem ->
+    expectedCredentialsItem.getServerId() == actualCredentialsItem.getServerId() \
+    && expectedCredentialsItem.getCredentialsId() == actualCredentialsItem.getCredentialsId()})
+    == null) {
+    	isChanged = true
+    }
+  }
+
+  return isChanged
+}
+
+if (globalConfigFile == null) {
+  addMavenSetting(id, name, comment, content, serverCredentials)
+} else if (globalConfigFile.name != name
+        || globalConfigFile.comment != comment
+        || globalConfigFile.content != content
+        || serverCredentialsNeedChanging(globalConfigFile.getServerCredentialMappings(), serverCredentials) == true) {
+  addMavenSetting(id, name, comment, content, serverCredentials)
+}

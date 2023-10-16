@@ -1,0 +1,52 @@
+#!groovy
+import jenkins.model.Jenkins
+import jenkins.plugins.git.GitSCMSource
+import jenkins.plugins.git.traits.BranchDiscoveryTrait
+import org.jenkinsci.plugins.workflow.libs.GlobalLibraries
+import org.jenkinsci.plugins.workflow.libs.LibraryConfiguration
+import org.jenkinsci.plugins.workflow.libs.SCMSourceRetriever
+
+def globalPipelines = Jenkins.instance.getExtensionList(GlobalLibraries.class)[0]
+def gitUrl = "{{ item.git_url }}"
+def pipelineName = "{{ item.name }}"
+def credId = "{{ item.credentials }}"
+def version = "{{ item.default_version }}"
+def implicit = false
+
+{% if item.load_implicitly is defined and item.load_implicitly is true %}
+  implicit = true
+{% endif %}
+
+def createPipelineLibrary(def pipelineName, def credId, def version, def implicit, def gitUrl) {
+  def scm = new GitSCMSource(gitUrl)
+  scm.traits = [new BranchDiscoveryTrait()]
+  scm.credentialsId = credId
+  def retriever = new SCMSourceRetriever(scm)
+  def pipeline = new LibraryConfiguration(pipelineName, retriever)
+  pipeline.defaultVersion = version
+  pipeline.implicit = implicit
+  pipeline.allowVersionOverride = false
+  pipeline.includeInChangesets = false
+  return pipeline
+}
+
+def existingPipeline = globalPipelines.libraries.find { it.getName() == pipelineName}
+
+if (existingPipeline != null) {
+  if ((existingPipeline.getDefaultVersion() != version)
+    || (existingPipeline.getRetriever().getScm().getCredentialsId() != credId)
+    || (existingPipeline.getRetriever().getScm().getRemote() != gitUrl)
+    || (existingPipeline.isImplicit() != implicit)) {
+
+    globalPipelines.libraries.remove(existingPipeline)
+    def newPipeline = createPipelineLibrary(pipelineName, credId, version, implicit, gitUrl)
+    globalPipelines.libraries.add(newPipeline)
+    println "Changed global shared libraries"
+  }
+} else {
+  def newPipeline = createPipelineLibrary(pipelineName, credId, version, implicit, gitUrl)
+  globalPipelines.libraries.add(newPipeline)
+  println "Changed global shared libraries"
+}
+
+globalPipelines.save()

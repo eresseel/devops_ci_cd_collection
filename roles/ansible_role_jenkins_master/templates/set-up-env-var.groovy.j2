@@ -1,0 +1,24 @@
+#!groovy
+import hudson.slaves.EnvironmentVariablesNodeProperty
+
+def name = "{{ item.name }}"
+def value = "{{ item.value }}"
+
+def jenkins = Jenkins.getInstance()
+def globalNodeProperties = jenkins.getGlobalNodeProperties()
+def envVarsNodeProperty = globalNodeProperties.
+  getAll(EnvironmentVariablesNodeProperty.class).find()
+
+if (!envVarsNodeProperty) {
+  envVarsNodeProperty = new EnvironmentVariablesNodeProperty()
+  globalNodeProperties.add(envVarsNodeProperty)
+}
+
+def envVars = envVarsNodeProperty.getEnvVars()
+
+if (envVars[name] != value) {
+  envVars.put(name, value)
+  println "Changed env var"
+}
+
+jenkins.save()

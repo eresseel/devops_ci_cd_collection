@@ -1,0 +1,40 @@
+---
+jenkins_master_home: '/home/jenkins'
+jenkins_master_admin_username: 'admin'
+jenkins_master_admin_password: 'admin'
+jenkins_master_url_prefix: ''
+jenkins_master_http_port: 8080
+jenkins_master_retries: 60
+jenkins_master_delay: 30
+jenkins_master_timeout: 360
+
+jenkins_master_plugins: []
+jenkins_master_ssh_credentials: []
+jenkins_master_usr_pw_credentials: []
+jenkins_master_secret_text_credentials: []
+jenkins_master_secret_file_credentials: []
+jenkins_master_global_maven_configs: []
+jenkins_master_global_properties_environment_variables: []
+jenkins_master_global_xml_configs: []
+jenkins_master_global_json_configs: []
+jenkins_master_oracle_jdk_installations: []
+jenkins_master_maven_installations: []
+jenkins_master_sonar_servers: []
+jenkins_master_bitbucket_endpoint: []
+jenkins_master_bitbucket_organization_folders: []
+jenkins_master_global_shared_libraries: []
+jenkins_master_backup_configuration: []
+jenkins_master_smtp_server: ''
+jenkins_master_hostname: 'localhost'
+jenkins_master_admin_address: 'jenkins@localhost'
+jenkins_master_access_control_for_builds: []
+jenkins_master_executors: 2
+jenkins_master_description: "Jenkins main"
+jenkins_master_labels: "master,devops"
+jenkins_master_usage: 'NORMAL'  # other value: EXCLUSIVE
+jenkins_master_use_ldap: false
+jenkins_master_ldap: {}
+jenkins_master_matrix_authorization_strategy:
+  - user_or_group: 'admin'
+    permissions:
+      - 'hudson.model.Hudson.Administer'

@@ -1,0 +1,4 @@
+---
+roles:
+  - src: geerlingguy.jenkins
+    version: 4.3.0

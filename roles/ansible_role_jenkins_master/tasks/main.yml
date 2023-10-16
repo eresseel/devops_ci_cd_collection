@@ -1,0 +1,402 @@
+---
+- name: Install Jenkins plugins
+  community.general.jenkins_plugin:
+    name: "{{ item.name | default(item) }}"
+    version: "{{ item.version | default(omit) }}"
+    jenkins_home: "{{ jenkins_master_home }}"
+    with_dependencies: yes
+    url_username: "{{ jenkins_master_admin_username }}"
+    url_password: "{{ jenkins_master_admin_password }}"
+    validate_certs: false
+    timeout: "{{ jenkins_master_timeout }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+  with_items: "{{ jenkins_master_plugins }}"
+  notify:
+    - Restart Jenkins Master
+    - Wait for Jenkins to start up
+
+- meta: flush_handlers
+
+- name: Create the SSH ssh-keys folder
+  ansible.builtin.file:
+    path: "{{ jenkins_master_home }}/ssh-keys"
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: 0755
+  when: jenkins_master_ssh_credentials is defined
+
+- name: Copy the SSH private keys
+  ansible.builtin.copy:
+    content: "{{ item.content_key }}"
+    dest: "{{ jenkins_master_home }}/ssh-keys/{{ item.id }}"
+  when: jenkins_master_ssh_credentials is defined
+  register: ssh_result
+  with_items: "{{ jenkins_master_ssh_credentials }}"
+
+- name: Set up SSH credentials
+  vars:
+    credentials_script: "{{ lookup('template', 'set-up-ssh-credential.groovy.j2') }}"
+    file_path: "{{ jenkins_master_home }}/ssh-keys/{{ item.id }}"
+  community.general.jenkins_script:
+    script: "{{ credentials_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when:
+    - "{{ ssh_result }} is changed"
+    - jenkins_master_ssh_credentials is defined
+  register: ssh_credential_status
+  changed_when: ssh_credential_status.output.find("Changed SSH credentials") != -1
+  with_items: "{{ jenkins_master_ssh_credentials }}"
+
+- name: Set up username password credentials
+  vars:
+    credentials_script: "{{ lookup('template', 'set-up-username-password-credential.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ credentials_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_usr_pw_credentials is defined
+  register: usr_pw_credentials_status
+  changed_when: usr_pw_credentials_status.output.find("Changed username password credentials") != -1
+  with_items: "{{ jenkins_master_usr_pw_credentials }}"
+
+- name: Set up secret text credentials
+  vars:
+    credentials_script: "{{ lookup('template', 'set-up-secret-text-credential.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ credentials_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: "jenkins_master_secret_text_credentials is defined"
+  register: secret_text_credentials_status
+  changed_when: secret_text_credentials_status.output.find("Changed secret text credentials") != -1
+  with_items: "{{ jenkins_master_secret_text_credentials }}"
+
+- name: Create the secret files folder
+  ansible.builtin.file:
+    path: "{{ jenkins_master_home }}/secret-files"
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: 0755
+  when: jenkins_master_secret_file_credentials is defined
+
+- name: Copy secret files
+  ansible.builtin.copy:
+    src: "{{ item.file }}"
+    dest: "{{ jenkins_master_home }}/secret-files/{{ item.id }}"
+  when: jenkins_master_secret_file_credentials is defined
+  register: secret_files_result
+  with_items: "{{ jenkins_master_secret_file_credentials }}"
+
+- name: Set up secret file credentials
+  vars:
+    credentials_script: "{{ lookup('template', 'set-up-secret-file-credential.groovy.j2') }}"
+    file_path: "{{ jenkins_master_home }}/secret-files/{{ item.id }}"
+  community.general.jenkins_script:
+    script: "{{ credentials_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when:
+    - "{{ secret_files_result }} is changed"
+    - jenkins_master_secret_file_credentials is defined
+  register: secret_file_credentials_status
+  changed_when: secret_file_credentials_status.output.find("Changed secret file credentials") != -1
+  with_items: "{{ jenkins_master_secret_file_credentials }}"
+
+- name: Set up Maven config file provider
+  vars:
+    config_provider_script: "{{ lookup('template', 'set-up-maven-configuration-provider.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ config_provider_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_global_maven_configs is defined
+  register: global_maven_configs_status
+  changed_when: global_maven_configs_status.output.find("Changed Maven config file provider") != -1
+  with_items: "{{ jenkins_master_global_maven_configs }}"
+
+- name: Set up global environment variables
+  vars:
+    envvar_script: "{{ lookup('template', 'set-up-env-var.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ envvar_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_global_properties_environment_variables is defined
+  register: global_properties_environment_variables_status
+  changed_when: global_properties_environment_variables_status.output.find("Changed env var") != -1
+  with_items: "{{ jenkins_master_global_properties_environment_variables }}"
+
+- name: Create XML config files folder
+  ansible.builtin.file:
+    path: "{{ jenkins_master_home }}/xml-files"
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: 0755
+  when: jenkins_master_global_xml_configs is defined
+
+- name: "Copy XML config file to server"
+  ansible.builtin.copy:
+    src: "{{ item.file }}"
+    dest: "{{ jenkins_master_home }}/xml-files/{{ item.id }}.xml"
+    owner: jenkins
+    group: jenkins
+  when: jenkins_master_global_xml_configs is defined
+  register: xml_files_result
+  with_items: "{{ jenkins_master_global_xml_configs }}"
+
+- name: Set up XML config file provider
+  vars:
+    config_provider_script: "{{ lookup('template', 'set-up-xml-config-file-provider.groovy.j2') }}"
+    file_path: "{{ jenkins_master_home }}/xml-files/{{ item.id }}.xml"
+  community.general.jenkins_script:
+    script: "{{ config_provider_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when:
+    - "{{ xml_files_result }} is changed"
+    - jenkins_master_global_xml_configs is defined
+  register: global_xml_configs_status
+  changed_when: global_xml_configs_status.output.find("Changed XML config file provider") != -1
+  with_items: "{{ jenkins_master_global_xml_configs }}"
+
+- name: Create JSON config files folder
+  ansible.builtin.file:
+    path: "{{ jenkins_master_home }}/json-files"
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: 0755
+  when: jenkins_master_global_json_configs is defined
+
+- name: "Copy JSON config file to server"
+  ansible.builtin.copy:
+    src: "{{ item.file }}"
+    dest: "/{{ jenkins_master_home }}/json-files/{{ item.id }}.json"
+    owner: jenkins
+    group: jenkins
+  register: json_files_result
+  with_items: "{{ jenkins_master_global_json_configs }}"
+
+- name: Set up JSON config file provider
+  vars:
+    config_provider_script: "{{ lookup('template', 'set-up-json-config-file-provider.groovy.j2') }}"
+    file_path: "{{ jenkins_master_home }}/json-files/{{ item.id }}.json"
+  community.general.jenkins_script:
+    script: "{{ config_provider_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when:
+    - "{{ json_files_result }} is changed"
+    - jenkins_master_global_json_configs is defined
+  with_items: "{{ jenkins_master_global_json_configs }}"
+  register: global_json_configs_status
+  changed_when: global_json_configs_status.output.find("Changed JSON config file provider") != -1
+
+- name: Set up JDK installations
+  vars:
+    jdk_installations_script: "{{ lookup('template', 'set-up-jdk-installations.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ jdk_installations_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_oracle_jdk_installations is defined
+  register: jdk_installations_status
+  changed_when: jdk_installations_status.output.find("Changed JDK installations") != -1
+  with_items: "{{ jenkins_master_oracle_jdk_installations }}"
+
+- name: Set up maven in Jenkins global tools
+  vars:
+    jdk_installations_script: "{{ lookup('template', 'set-up-maven-installations.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ jdk_installations_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_access_control_for_builds is defined
+  register: maven_installations_status
+  changed_when: maven_installations_status.output.find("Changed Maven installations") != -1
+  with_items: "{{ jenkins_master_maven_installations }}"
+
+- name: Set up Sonar in Jenkins configuration from sonar plugin
+  vars:
+    sonar_publisher_script: "{{ lookup('template', 'set-up-sonar.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ sonar_publisher_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_sonar_servers is defined
+  register: sonar_servers_status
+  changed_when: sonar_servers_status.output.find("Changed Sonar servers") != -1
+  with_items: "{{ jenkins_master_sonar_servers }}"
+
+- name: Set up Bitbucket endpoint
+  vars:
+    envvar_script: "{{ lookup('template', 'set-up-bitbucket-endpoint.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ envvar_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_bitbucket_endpoint is defined
+  register: bitbucket_endpoint_status
+  changed_when: bitbucket_endpoint_status.output.find("Changed Bitbucket endpoint") != -1
+  with_items: "{{ jenkins_master_bitbucket_endpoint }}"
+
+- name: Set up Bitbucket organization folders
+  vars:
+    envvar_script: "{{ lookup('template', 'set-up-organization-folder-config.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ envvar_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_bitbucket_organization_folders is defined
+  register: bitbucket_organization_folders_status
+  changed_when: bitbucket_organization_folders_status.output.find("Changed Bitbucket organization folders") != -1
+  with_items: "{{ jenkins_master_bitbucket_organization_folders }}"
+
+- name: Set up global shared pipeline libraries
+  vars:
+    shared_pipeline_script: "{{ lookup('template', 'set-up-global-pipeline-library.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ shared_pipeline_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_global_shared_libraries is defined
+  register: global_shared_libraries_status
+  changed_when: global_shared_libraries_status.output.find("Changed global shared libraries") != -1
+  with_items: "{{ jenkins_master_global_shared_libraries }}"
+
+- name: Set up backup plugin
+  vars:
+    backup_plugin_script: "{{ lookup('template', 'set-up-backup-plugin.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ backup_plugin_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_backup_configuration is defined
+  register: backup_configuration_status
+  changed_when: backup_configuration_status.output.find("Changed backup plugin") != -1
+  with_items: "{{ jenkins_master_backup_configuration }}"
+
+- name: Set up global mailer
+  vars:
+    set_up_global_mailer_script: "{{ lookup('template', 'set-up-global-mailer.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ set_up_global_mailer_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_smtp_server is defined
+  register: smtp_server_status
+  changed_when: smtp_server_status.output.find("Changed SMTP server") != -1
+
+- name: Set up Jenkins location configuration
+  vars:
+    set_up_jenkins_master_location_configuration_script: "{{ lookup('template', 'set-up-location-configuration.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ set_up_jenkins_master_location_configuration_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  register: jenkins_master_location
+  changed_when: jenkins_master_location.output.find("Changed location configuration") != -1
+
+- name: Set up access control for builds
+  vars:
+    access_control_for_builds_config_script: "{{ lookup('template', 'set-up-access-control-for-builds.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ access_control_for_builds_config_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_access_control_for_builds is defined
+  register: access_control_for_builds_status
+  changed_when: access_control_for_builds_status.output.find("Changed access control for builds") != -1
+  with_items: "{{ jenkins_master_access_control_for_builds }}"
+
+- name: Set up executors
+  vars:
+    executors_script: "{{ lookup('template', 'set-up-executors.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ executors_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_executors is defined
+  register: executors_status
+  changed_when: executors_status.output.find("Changed executors") != -1
+
+- name: Set up description
+  vars:
+    description_script: "{{ lookup('template', 'set-up-description.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ description_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_description is defined
+  register: description_status
+  changed_when: description_status.output.find("Changed description") != -1
+
+- name: Set up labels
+  vars:
+    labels_script: "{{ lookup('template', 'set-up-labels.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ labels_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_labels is defined
+  register: labels_status
+  changed_when: labels_status.output.find("Changed labels") != -1
+
+- name: Set up usage
+  vars:
+    usage_script: "{{ lookup('template', 'set-up-usage.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ usage_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_usage is defined
+  register: usage_status
+  changed_when: usage_status.output.find("Changed usage") != -1
+
+- name: Set up matrix authorization strategy
+  vars:
+    matrix_authorization_strategy_script: "{{ lookup('template', 'set-up-matrix-authorization-strategy.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ matrix_authorization_strategy_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_matrix_authorization_strategy is defined
+  register: matrix_authorization_strategy_status
+  changed_when: matrix_authorization_strategy_status.output.find("Changed matrix authorization strategy") != -1
+
+- name: Set up LDAP authentication
+  vars:
+    ldap_config_script: "{{ lookup('template', 'set-up-ldap.groovy.j2') }}"
+  community.general.jenkins_script:
+    script: "{{ ldap_config_script }}"
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}"
+    user: "{{ jenkins_master_admin_username }}"
+    password: "{{ jenkins_master_admin_password }}"
+  when: jenkins_master_use_ldap

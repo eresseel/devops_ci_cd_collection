@@ -1,0 +1,26 @@
+---
+galaxy_info:
+  role_name: ansible_role_jenkins_master
+  author: Laszlo Beres
+  description: Set Up Jenkins Configuration
+  license: "GPL-2.0-or-later"
+  min_ansible_version: '7.6.0'
+  galaxy_tags: []
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+dependencies:
+  - role: geerlingguy.jenkins
+    # https://github.com/geerlingguy/ansible-role-jenkins/issues/378
+    # workaround is to add the jenkins new GPG key
+    # because jenkins changed the GPG key name
+    jenkins_repo_key_url: "https://pkg.jenkins.io/debian/jenkins.io-2023.key"
+    jenkins_hostname: "{{ jenkins_master_hostname }}"
+    jenkins_url_prefix: "{{ jenkins_master_url_prefix }}"
+    jenkins_home: "{{ jenkins_master_home }}"
+    jenkins_version: "2.332"
+    jenkins_admin_username: "{{ jenkins_master_admin_username }}"
+    jenkins_admin_password: "{{ jenkins_master_admin_password }}"
+    jenkins_connection_delay: "{{ jenkins_master_delay }}"
+    jenkins_connection_retries: "{{ jenkins_master_retries }}"

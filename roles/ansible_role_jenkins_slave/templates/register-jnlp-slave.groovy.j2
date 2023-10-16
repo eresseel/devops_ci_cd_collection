@@ -1,0 +1,16 @@
+import jenkins.model.*
+import hudson.model.*
+import hudson.slaves.*
+
+Slave slave = new DumbSlave(
+        "{{ slave.name | mandatory }}",
+        "{{ slave.description | default('Dumb Slave') }}",
+        "{{ slave.workspace | default('/home/' + jenkins_slave_user + '/workspace') }}",
+        "{{ slave.executors | default(None) }}",
+        Node.Mode.{{ slave.mode | default('NORMAL') }},
+        "{{ slave.labels | default(None) }}",
+        new JNLPLauncher(),
+        new RetentionStrategy.Always(),
+        new LinkedList())
+
+Jenkins.instance.addNode(slave)

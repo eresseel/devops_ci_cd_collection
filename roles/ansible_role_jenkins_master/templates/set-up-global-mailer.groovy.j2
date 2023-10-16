@@ -1,0 +1,18 @@
+#!groovy
+import hudson.tasks.Mailer
+
+def jenkinsMasterSmtpHost = "{{ jenkins_master_smtp_server }}"
+
+updateSmtpSettings(jenkinsMasterSmtpHost)
+
+def updateSmtpSettings(def smtpHost) {
+  def descriptor = Mailer.descriptor()
+
+  if (descriptor.smtpHost != smtpHost) {
+    descriptor.smtpHost = smtpHost
+    descriptor.useSsl = false
+    descriptor.charset = "UTF-8"
+    println "Changed SMTP server"
+    descriptor.save()
+  }
+}

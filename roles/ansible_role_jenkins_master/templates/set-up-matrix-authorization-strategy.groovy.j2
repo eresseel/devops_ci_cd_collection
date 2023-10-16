@@ -1,0 +1,56 @@
+#!groovy
+import jenkins.model.Jenkins
+import hudson.security.GlobalMatrixAuthorizationStrategy
+import hudson.security.ProjectMatrixAuthorizationStrategy
+import hudson.security.Permission
+
+def permissionMatrix = [
+	{% for item in jenkins_master_matrix_authorization_strategy %}
+		"{{ item.user_or_group }}": [
+			{% for permission in item.permissions %}
+				"{{ permission }}",
+			{% endfor %}
+		],
+	{% endfor %}
+]
+
+class BuildPermission {
+    static Map<Permission, String> buildNewAccessList(String userOrGroup, List<String> permissions) {
+        def newPermissionsMap = [:]
+        permissions.each { permission ->
+            newPermissionsMap.put(Permission.fromId(permission), userOrGroup)
+        }
+        return newPermissionsMap
+    }
+}
+
+def getAuthorizationInfo() {
+  def jenkinsInstance = Jenkins.getInstance()
+  def authorizationStrategy = jenkinsInstance.getAuthorizationStrategy()
+
+  if (authorizationStrategy instanceof GlobalMatrixAuthorizationStrategy) {
+    def matrixStrategy = (GlobalMatrixAuthorizationStrategy) authorizationStrategy
+    def permissionIds = matrixStrategy.getGrantedPermissions()
+
+    return permissionIds
+  }
+}
+
+
+if ( Jenkins.instance.isUseSecurity() ) {
+  strategy = new hudson.security.ProjectMatrixAuthorizationStrategy()
+
+  permissionMatrix.each { userOrGroup, capabilities ->
+    accessList = BuildPermission.buildNewAccessList(userOrGroup, capabilities)
+    accessList.each {	p,u ->
+      strategy.add(p, u)
+    }
+  }
+
+
+  if (getAuthorizationInfo() != strategy.getGrantedPermissions()) {
+    Jenkins.instance.setAuthorizationStrategy(strategy)
+    println "Changed matrix authorization strategy"
+    Jenkins.instance.save()
+  }
+}
