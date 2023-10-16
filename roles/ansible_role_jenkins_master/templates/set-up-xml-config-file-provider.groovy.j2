@@ -1,0 +1,21 @@
+#!groovy
+import org.jenkinsci.plugins.configfiles.GlobalConfigFiles
+import org.jenkinsci.plugins.configfiles.xml.XmlConfig
+
+def id = "{{ item.id }}"
+def name = "{{ item.name }}"
+def comment = "{{ item.comment }}"
+def fileContent = new File("{{ file_path }}").text
+
+def addOrUpdateXmlConfig(def id, def name, def comment, def fileContent) {
+  def configFiles = GlobalConfigFiles.get()
+  def existingConfig = configFiles.getById(id)
+
+  if (existingConfig == null || existingConfig.name != name || existingConfig.comment != comment || existingConfig.content != fileContent) {
+    def xmlConfig = new XmlConfig(id, name, comment, fileContent)
+    configFiles.save(xmlConfig)
+    println "Changed XML config file provider"
+  }
+}
+
+addOrUpdateXmlConfig(id, name, comment, fileContent)

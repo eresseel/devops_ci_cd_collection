@@ -1,0 +1,23 @@
+#!groovy
+import jenkins.model.JenkinsLocationConfiguration
+
+def jlc = JenkinsLocationConfiguration.get()
+def url = "https://{{ jenkins_master_hostname }}/"
+def adminAddress = "{{ jenkins_master_admin_address }}"
+
+def hasLocationChanged = false
+
+if (jlc.getUrl() != url) {
+  jlc.setUrl(url)
+  hasLocationChanged = true
+}
+
+if (jlc.getAdminAddress() != adminAddress) {
+  jlc.setAdminAddress(adminAddress)
+  hasLocationChanged = true
+}
+
+if (hasLocationChanged) {
+  jlc.save()
+  println "Changed location configuration"
+}

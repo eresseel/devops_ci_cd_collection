@@ -1,0 +1,39 @@
+---
+- name: Installing Build tools
+  hosts: all
+  become: true
+  pre_tasks:
+    - name: Install needed packages from APT repository
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - git
+        - tar
+        - unzip
+        - curl
+        - wget
+        - openjdk-11-jre
+    - name: Add docker group
+      ansible.builtin.group:
+        name: docker
+        state: present
+
+- name: Setup Jenkins Master
+  hosts: master
+  become: true
+  roles:
+    - role: geerlingguy.jenkins
+      vars:
+        # https://github.com/geerlingguy/ansible-role-jenkins/issues/378
+        # workaround is to add the jenkins new GPG key
+        # because jenkins changed the GPG key name
+        jenkins_repo_key_url: "https://pkg.jenkins.io/debian/jenkins.io-2023.key"
+        jenkins_hostname: "ubuntu-focal-jenkins-master"
+        jenkins_url_prefix: ""
+        jenkins_home: /home/jenkins
+        jenkins_version: "2.332"
+        jenkins_admin_username: admin
+        jenkins_admin_password: admin
+        jenkins_connection_delay: 3
+        jenkins_connection_retries: 30

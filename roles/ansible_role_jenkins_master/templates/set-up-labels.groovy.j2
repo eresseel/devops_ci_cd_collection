@@ -1,0 +1,23 @@
+#!groovy
+import jenkins.model.Jenkins
+
+def expectedLabels = "{{ jenkins_master_labels }}".split(",")
+
+def setJenkinsLabels(expectedLabels) {
+    def masterNode = Jenkins.instance.getComputer('')
+    def actualLabels = masterNode.getAssignedLabels().collect { it.name }
+
+    def hasChange = false
+    expectedLabels.each { label ->
+        if (!actualLabels.contains(label)) {
+            hasChange = true
+        }
+    }
+
+    if (hasChange) {
+        Jenkins.instance.setLabelString(expectedLabels.join(" "))
+        println "Changed labels"
+    }
+}
+
+setJenkinsLabels(expectedLabels)

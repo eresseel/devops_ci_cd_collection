@@ -1,0 +1,61 @@
+#!groovy
+import jenkins.model.Jenkins
+import com.cloudbees.jenkins.plugins.bitbucket.endpoints.BitbucketEndpointConfiguration
+import com.cloudbees.jenkins.plugins.bitbucket.endpoints.BitbucketServerEndpoint
+import com.cloudbees.jenkins.plugins.bitbucket.server.BitbucketServerWebhookImplementation
+
+def displayName = "{{ item.display_name }}"
+def serverUrl = "{{ item.server_url }}"
+def manageHook = "{{ item.manage_hooks }}".toBoolean()
+def credentialsId = "{{ item.credentials_id }}"
+def callCanMerge = "{{ item.call_can_merge }}".toBoolean()
+def callChanges = "{{ item.call_changes }}".toBoolean()
+def webhookImplementation = "{{ item.webhook_implementation }}"
+
+def addBitbucketEndpoint(String displayName, String serverUrl, boolean manageHook,
+                         String credentialsId, boolean callCanMerge, boolean callChanges,
+                         String webhookImplementation) {
+  def jenkins = Jenkins.getInstance()
+  def bitbucketEndpointConfig = jenkins.getDescriptor(BitbucketEndpointConfiguration)
+
+  def bitbucketServerEndpoint = new BitbucketServerEndpoint(
+    displayName,
+    serverUrl,
+    manageHook,
+    credentialsId,
+    ""
+  )
+
+  if (!callCanMerge) {
+    bitbucketServerEndpoint.setCallCanMerge(false)
+  }
+
+  if (!callChanges) {
+    bitbucketServerEndpoint.setCallChanges(false)
+  }
+
+  if (manageHook) {
+    bitbucketServerEndpoint.setWebhookImplementation(BitbucketServerWebhookImplementation."${webhookImplementation}")
+  }
+
+  bitbucketEndpointConfig.addEndpoint(bitbucketServerEndpoint)
+  println "Changed Bitbucket endpoint"
+  jenkins.save()
+}
+
+def jenkinsInstance = Jenkins.getInstance()
+def globalConfig = jenkinsInstance.getDescriptor(BitbucketEndpointConfiguration)
+def bitbucketEndpoint = globalConfig.getEndpoints().find { endpoint ->
+  endpoint.getDisplayName() == displayName
+}
+
+if (bitbucketEndpoint == null) {
+  addBitbucketEndpoint(displayName,
+    serverUrl,
+    manageHook,
+    credentialsId,
+    callCanMerge,
+    callChanges,
+    webhookImplementation
+  )
+}

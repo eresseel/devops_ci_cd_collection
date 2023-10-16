@@ -1,0 +1,17 @@
+---
+- name: Restart Jenkins Master
+  ansible.builtin.service:
+    name: jenkins
+    state: restarted
+  changed_when: false
+  notify: Wait for Jenkins to start up
+
+- name: Wait for Jenkins to start up
+  ansible.builtin.uri:
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_master_http_port }}{{ jenkins_master_url_prefix }}/cli/"
+    status_code: 200,403
+  changed_when: false
+  register: result
+  until: result.status in [200, 403]
+  retries: "{{ jenkins_master_retries }}"
+  delay: "{{ jenkins_master_delay }}"

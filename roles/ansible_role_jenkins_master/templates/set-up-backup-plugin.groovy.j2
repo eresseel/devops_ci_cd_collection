@@ -1,0 +1,50 @@
+#!groovy
+import org.jvnet.hudson.plugins.thinbackup.ThinBackupMgmtLink
+
+def backupPath = "{{ item.path }}"
+def maxNumberToKeep = "{{ item.max_backup_nuber }}".toInteger()
+def backupSchedule = "{{ item.cron }}"
+def timeout = "{{ item.timeout }}".toInteger()
+def backupBuildResult = "{{ item.backup_result }}".toBoolean()
+def backupNextBuildNumber = "{{ item.backup_next_build_number }}".toBoolean()
+def moveOldBackupToZip = "{{ item.move_old_backup_to_zip }}".toBoolean()
+
+def backupConfig = new ThinBackupMgmtLink().getConfiguration()
+
+if (backupConfig.backupPath != backupPath) {
+  backupConfig.backupPath = backupPath
+  println "Changed backup plugin"
+}
+
+if (backupConfig.nrMaxStoredFull != maxNumberToKeep) {
+  backupConfig.nrMaxStoredFull = maxNumberToKeep
+  println "Changed backup plugin"
+}
+
+if (backupConfig.fullBackupSchedule != backupSchedule) {
+  backupConfig.fullBackupSchedule = backupSchedule
+  println "Changed backup plugin"
+}
+
+if (backupConfig.forceQuietModeTimeout != timeout) {
+  backupConfig.waitForIdle = true
+  backupConfig.forceQuietModeTimeout = timeout
+  println "Changed backup plugin"
+}
+
+if (backupConfig.backupBuildResults != backupBuildResult) {
+  backupConfig.backupBuildResults = backupBuildResult
+  println "Changed backup plugin"
+}
+
+if (backupConfig.backupNextBuildNumber != backupNextBuildNumber) {
+  backupConfig.backupNextBuildNumber = backupNextBuildNumber
+  println "Changed backup plugin"
+}
+
+if (backupConfig.moveOldBackupsToZipFile != moveOldBackupToZip) {
+  backupConfig.moveOldBackupsToZipFile = moveOldBackupToZip
+  println "Changed backup plugin"
+}
+
+backupConfig.save()

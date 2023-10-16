@@ -1,0 +1,168 @@
+#!groovy
+import jenkins.branch.OrganizationFolder
+import jenkins.scm.api.trait.SCMSourceTrait
+import com.cloudbees.jenkins.plugins.bitbucket.BitbucketSCMSource
+import com.cloudbees.jenkins.plugins.bitbucket.BitbucketSCMNavigator
+import com.cloudbees.jenkins.plugins.bitbucket.BranchDiscoveryTrait
+import com.cloudbees.jenkins.plugins.bitbucket.OriginPullRequestDiscoveryTrait
+import com.cloudbees.jenkins.plugins.bitbucket.SSHCheckoutTrait
+import com.cloudbees.jenkins.plugins.bitbucket.WebhookRegistrationTrait
+import com.cloudbees.jenkins.plugins.bitbucket.endpoints.BitbucketEndpointConfiguration
+import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy
+
+import jenkins.plugins.git.GitSCMSource
+import jenkins.plugins.git.traits.BranchDiscoveryTrait
+import org.jenkinsci.plugins.workflow.libs.FolderLibraries
+import org.jenkinsci.plugins.workflow.libs.LibraryConfiguration
+import org.jenkinsci.plugins.workflow.libs.SCMSourceRetriever
+
+import hudson.security.*
+import com.cloudbees.hudson.plugins.folder.properties.AuthorizationMatrixProperty
+
+Jenkins jenkins = Jenkins.getInstance()
+
+def name = "{{ item.name }}"
+def displayName = "{{ item.display_name }}"
+def bitbucketUrl = "{{ item.bitbucket_url }}"
+def projectKey = "{{ item.project_key }}"
+def scanCredentials = "{{ item.scan_credentials }}"
+def checkoutCredentials = "{{ item.checkout_credentials }}"
+def bitbucketSshPort = "{{ item.bitbucket_ssh_port }}"
+def bitbucketServerName = "{{ item.bitbucket_server_name }}"
+def bitbucketEndpoint = jenkins.getDescriptor("com.cloudbees.jenkins.plugins.bitbucket.endpoints.BitbucketEndpointConfiguration")
+def bitbucketServerUrl = null
+
+bitbucketEndpoint.getEndpoints().find {
+  if (it.getDisplayName() == bitbucketServerName) {
+  	bitbucketServerUrl = it.getServerUrl()
+  }
+}
+
+def permissionMatrix = [
+  {% if item.project_based_security is defined %}
+    {% for security_item in item.project_based_security %}
+      "{{ security_item.user_or_group }}" : [ {% for permission in security_item.permissions %}
+          "{{ permission }}",
+        {% endfor %}
+      ],
+    {% endfor %}
+  {% endif %}
+]
+
+class BuildPermission {
+  static buildNewAccessList(userOrGroup, permissions) {
+    def newPermissionsMap = [:]
+    permissions.each {
+      newPermissionsMap.put(Permission.fromId(it), userOrGroup)
+    }
+    return newPermissionsMap
+  }
+}
+
+def sharedPipeline = [
+  {% if item.pipeline_libraries is defined %}
+    {% for pipeline_item in item.pipeline_libraries %}
+      "pipelineName" : "{{ pipeline_item.name }}",
+      "pipelineGitUrl" : "{{ pipeline_item.git_url }}",
+      "pipelineCredId" : "{{ pipeline_item.credentials }}",
+      "pipelineVersion" : "{{ pipeline_item.default_version }}",
+      "pipelineImplicit" : "{{ pipeline_item.implicit }}".toBoolean(),
+    {% endfor %}
+  {% endif %}
+]
+
+def generateTraitList(def checkoutCredentials) {
+  List<SCMSourceTrait> traitList = new Collections.UnmodifiableRandomAccessList([
+    new com.cloudbees.jenkins.plugins.bitbucket.BranchDiscoveryTrait(true, true),
+    new OriginPullRequestDiscoveryTrait(2),
+    new SSHCheckoutTrait(checkoutCredentials),
+    new WebhookRegistrationTrait("ITEM")
+  ])
+
+  return traitList
+}
+
+def generatePermissionMatrix(def permissionMatrix) {
+  def matrixAuth = new com.cloudbees.hudson.plugins.folder.properties.AuthorizationMatrixProperty()
+
+  permissionMatrix.each { userOrGroup, capabilities ->
+    accessList = BuildPermission.buildNewAccessList(userOrGroup, capabilities)
+    accessList.each {	p,u ->
+        matrixAuth.add(p, u)
+    }
+  }
+
+  return matrixAuth
+}
+
+def generateSharedPipeline(def sharedPipeline) {
+  def scm = new GitSCMSource(sharedPipeline.pipelineGitUrl)
+  scm.traits = [new jenkins.plugins.git.traits.BranchDiscoveryTrait()]
+  scm.credentialsId = sharedPipeline.pipelineCredId
+  def retriever = new SCMSourceRetriever(scm)
+  def pipeline = new LibraryConfiguration(sharedPipeline.pipelineName, retriever)
+  pipeline.defaultVersion = sharedPipeline.pipelineVersion
+  pipeline.implicit = sharedPipeline.pipelineImplicit
+  pipeline.allowVersionOverride = false
+  pipeline.includeInChangesets = false
+
+  return pipeline
+}
+
+if (Jenkins.get().getItemByFullName(name) == null) {
+  def strategy = new DefaultOrphanedItemStrategy(true, "7", "")
+  def source = new BitbucketSCMNavigator(name, scanCredentials, checkoutCredentials)
+  def organizationFolder = jenkins.createProject(OrganizationFolder.class, displayName)
+
+  organizationFolder.setOrphanedItemStrategy(strategy)
+  organizationFolder.getNavigators().add(source)
+  organizationFolder.getProperties().add(generatePermissionMatrix(permissionMatrix))
+
+  if (sharedPipeline.size() != 0) {
+    organizationFolder.addProperty(new FolderLibraries([generateSharedPipeline(sharedPipeline)]))
+  }
+
+  source.setTraits(generateTraitList(checkoutCredentials))
+  source.setBitbucketServerUrl(bitbucketServerUrl)
+
+  println "Changed Bitbucket organization folders"
+} else {
+  def organizationFolder = Jenkins.getInstance().getItem(name)
+  def expectedMatrix = generatePermissionMatrix(permissionMatrix)
+  def expectedSharedPipeline = sharedPipeline.size() != 0 ? generateSharedPipeline(sharedPipeline) : null
+  def actualPermissions = organizationFolder.properties.\
+    get(com.cloudbees.hudson.plugins.folder.properties.AuthorizationMatrixProperty)
+  def folderLibraries = organizationFolder.getProperties().get(FolderLibraries)
+  def actualSharedPipeline = folderLibraries.getLibraries()
+
+  if (actualPermissions) {
+    if (actualPermissions.getGrantedPermissions() != expectedMatrix.getGrantedPermissions()) {
+      organizationFolder.getProperties().replace(expectedMatrix)
+      println "Changed Bitbucket organization folders"
+    }
+  }
+
+  def isEqual = false
+  if (expectedSharedPipeline && expectedSharedPipeline != null && actualSharedPipeline != null) {
+    if (expectedSharedPipeline.getName() != actualSharedPipeline[0].getName()) {
+        isEqual = true
+    }
+    if (expectedSharedPipeline.isImplicit() != actualSharedPipeline[0].isImplicit()) {
+        isEqual = true
+    }
+    if (expectedSharedPipeline.getDefaultVersion() != actualSharedPipeline[0].getDefaultVersion()) {
+        isEqual = true
+    }
+    if (expectedSharedPipeline.getRetriever().getScm().getRemote() != actualSharedPipeline[0].getRetriever().getScm().getRemote()) {
+        isEqual = true
+    }
+    if (expectedSharedPipeline.getRetriever().getScm().getCredentialsId() != actualSharedPipeline[0].getRetriever().getScm().getCredentialsId()) {
+        isEqual = true
+    }
+
+    if (isEqual) {
+      organizationFolder.getProperties().replace(new FolderLibraries([expectedSharedPipeline]))
+      println "Changed Bitbucket organization folders"
+    }
+  }
+}

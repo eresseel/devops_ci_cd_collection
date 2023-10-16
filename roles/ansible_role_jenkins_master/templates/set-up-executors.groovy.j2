@@ -1,0 +1,14 @@
+#!groovy
+import jenkins.model.Jenkins
+
+def expectedExecutors = "{{ jenkins_master_executors }}".toInteger()
+
+def setNumExecutorsIfNeeded(expectedCount) {
+    def actualCount = Jenkins.instance.getComputer('').getExecutors().size()
+    if (actualCount != expectedCount) {
+        Jenkins.instance.setNumExecutors(expectedCount)
+        println "Changed executors"
+    }
+}
+
+setNumExecutorsIfNeeded(expectedExecutors)

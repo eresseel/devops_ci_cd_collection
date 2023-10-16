@@ -1,0 +1,31 @@
+#!groovy
+import jenkins.security.QueueItemAuthenticatorConfiguration
+import org.jenkinsci.plugins.authorizeproject.GlobalQueueItemAuthenticator
+import org.jenkinsci.plugins.authorizeproject.strategy.SpecificUsersAuthorizationStrategy
+import org.jenkinsci.plugins.authorizeproject.strategy.TriggeringUsersAuthorizationStrategy
+import org.jenkinsci.plugins.authorizeproject.strategy.AnonymousAuthorizationStrategy
+import org.jenkinsci.plugins.authorizeproject.strategy.SystemAuthorizationStrategy
+
+def authenticatorType = this.class.classLoader
+  .loadClass("org.jenkinsci.plugins.authorizeproject.{{ item.authenticator_type }}")
+def strategy = this.class.classLoader
+  .loadClass("org.jenkinsci.plugins.authorizeproject.strategy.{{ item.strategy }}")
+def userId = "{{ item.user_id is defined}}"
+def authenticators = QueueItemAuthenticatorConfiguration.get().getAuthenticators()
+def strategies = authenticators.collect { it.strategy }
+
+if (!strategies.find { strategy.isInstance(it) }) {
+  def newAuthenticator = createAuthenticatorInstance(authenticatorType, strategy, userId)
+  authenticators.add(newAuthenticator)
+  println "Changed access control for builds"
+}
+
+def createAuthenticatorInstance(authenticatorType, strategy, userId) {
+  if (strategy == SpecificUsersAuthorizationStrategy) {
+    return authenticatorType.newInstance(strategy.newInstance([userId] as Object[]))
+  } else {
+    return authenticatorType.newInstance(strategy.newInstance())
+  }
+}
+
+Jenkins.instance.save()
