@@ -1,5 +1,5 @@
 namespace: devops
-name: devops_jenkins_collection
+name: devops_ci_cd_collection
 version: 1.0.0
 readme: README.md
 authors:
@@ -13,6 +13,6 @@ tags:
   - jenkins
   - grafana
 dependencies: {}
-repository: https://github.com/eresseel/devops_jenkins_collection
-documentation: https://github.com/eresseel/devops_jenkins_collection/README.md
+repository: https://github.com/eresseel/devops_ci_cd_collection
+documentation: https://github.com/eresseel/devops_ci_cd_collection/README.md
 homepage: https://www.eresseel.org

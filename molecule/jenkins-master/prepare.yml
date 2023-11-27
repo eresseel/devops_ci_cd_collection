@@ -3,7 +3,7 @@
   hosts: master
   become: true
   collections:
-    - devops.devops_jenkins_collection
+    - devops.devops_ci_cd_collection
   pre_tasks:
     - name: Install needed packages from APT repository
       ansible.builtin.apt:
@@ -41,7 +41,7 @@
   hosts: master
   become: true
   collections:
-    - devops.devops_jenkins_collection
+    - devops.devops_ci_cd_collection
   roles:
     - role: ansible_role_jenkins_master
       vars:

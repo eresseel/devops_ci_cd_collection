@@ -1,4 +1,4 @@
-# 1. devops_jenkins_collection
+# 1. devops_ci_cd_collection
 
 ## 2. Prepare developer environment
 ```bash
