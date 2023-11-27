@@ -1,0 +1,6 @@
+---
+- include: call_script.yml
+  vars:
+    script_name: create_repo_helm_hosted
+    args: "{{ _nexus_repos_helm_defaults|combine(item) }}"
+  with_items: "{{ nexus_repos_helm_hosted }}"

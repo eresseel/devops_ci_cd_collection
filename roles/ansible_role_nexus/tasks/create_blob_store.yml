@@ -1,0 +1,6 @@
+---
+- include: call_script.yml
+  vars:
+    script_name: create_blob_store
+    args: "{{ item }}"
+  with_items: "{{ nexus_blob_stores }}"

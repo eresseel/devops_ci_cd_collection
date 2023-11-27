@@ -1,0 +1,15 @@
+---
+- include: call_script.yml
+  vars:
+    script_name: create_task
+    args:
+      name: "Remove snapshots from {{ item.repository }}"
+      cron: "{{ item.cron | default ('0 0 1 1/1 * ? *') }}"
+      type_id: "repository.maven.remove-snapshots"
+      task_properties:
+        repositoryName: "{{ item.repository }}"
+        minimumRetained: "{{ item.minimum_retained | default('5') }}"
+        snapshotRetentionDays: "{{ item.snapshots_retention_days | default('30') }}"
+        removeIfReleased: "{{ item.remove_if_released | default('true') }}"
+        gracePeriodInDays: "{{ item.grace_period_in_days | default('90') }}"
+  with_items: "{{ nexus_maven_snapshots_cleanup_tasks }}"

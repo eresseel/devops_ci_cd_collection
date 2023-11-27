@@ -1,0 +1,59 @@
+---
+- name: Check If Bundle is already set
+  xml:
+    path: "{{ nexus_feature_xml }}"
+    xpath: "//nexus-core-feature:feature[@name='{{ plugin.artifact_id }}']"
+    namespaces:
+      nexus-core-feature: "{{ nexus_core_feature }}"
+    count: yes
+  register: feature_matches
+
+- name: Check If Bundle is already set with the same version
+  xml:
+    path: "{{ nexus_feature_xml }}"
+    xpath: "//nexus-core-feature:feature[@name='{{ plugin.artifact_id }}'][@version='{{ plugin.version}}']"
+    namespaces:
+      nexus-core-feature: "{{ nexus_core_feature }}"
+    count: yes
+  register: exact_feature_matches
+
+- name: Evaluate matches from the XML
+  set_fact:
+    install_feature: "{{ feature_matches.count == 0 | bool }}"
+    upgrade_feature: "{{ feature_matches.count != exact_feature_matches.count | bool }}"
+
+- name: Remove old Bundle entry
+  xml:
+    backup: yes
+    path: "{{ nexus_feature_xml }}"
+    xpath: "//nexus-core-feature:feature[@name='{{ plugin.artifact_id }}']"
+    state: absent
+    namespaces:
+      nexus-core-feature: "{{ nexus_core_feature }}"
+    input_type: xml
+  register: old_plugin
+  when: upgrade_feature
+
+- name: Add Bundle entry
+  xml:
+    backup: yes
+    path: "{{ nexus_feature_xml }}"
+    xpath: "//nexus-core-feature:features"
+    namespaces:
+      nexus-core-feature: "{{ nexus_core_feature }}"
+    input_type: xml
+    # yamllint disable rule:trailing-spaces
+    add_children: |
+      <feature name="{{ plugin.artifact_id }}" description="org.sonatype.nexus.plugins:{{ plugin.artifact_id }}" version="{{ plugin.version }}">
+          <details>{{ plugin.group_id }}:{{ plugin.artifact_id }}</details>
+          <bundle>mvn:org.sonatype.nexus.plugins/{{ plugin.artifact_id }}/{{ plugin.version }}</bundle>
+      </feature>
+
+    # yamllint enable rule:trailing-spaces
+  register: feature_bundle
+  when: install_feature or upgrade_feature
+
+- name: Set the fact that the plugins were installed
+  set_fact:
+    setup_plugin: true
+  when: feature_bundle is changed

@@ -1,0 +1,108 @@
+---
+- name: Check for previous installation
+  include: check_install.yml
+
+- name: Setup defult properties
+  include: setup_nexus_properties.yml
+  when:
+    - install_binaries is defined
+    - install_binaries
+    - "{{ nexus_version is version_compare('3.21.2-03', '>=')}}"
+
+- name: Set Configured Admin Password from 3.21.2-03
+  include: change_random_generated_password.yml
+
+- name: Set Configured Admin Password
+  include: set_admin_password.yml
+  when:
+    - nexus_admin_pw != nexus_default_admin_pw
+
+- include: declare_script_each.yml
+  with_items:
+    - delete_repo
+    - create_blob_store
+    - create_cleanup_policies
+    - create_repo_maven_proxy
+    - create_repo_maven_group
+    - create_repo_maven_hosted
+    - create_repo_pypi_hosted
+    - create_repo_pypi_proxy
+    - create_repo_npm_hosted
+    - create_repo_npm_proxy
+    - create_repo_npm_group
+    - create_repo_docker_hosted
+    - create_repo_raw_hosted
+    - create_repo_helm_hosted
+    - create_repo_conan_hosted
+    - create_repo_conan_proxy
+    - setup_anonymous_access
+    - setup_ldap
+    - setup_role
+    - update_role_mappings
+    - create_task
+    - setup_realms
+
+- name: Register blobs dir stat (for first-time install)
+  stat:
+    path: "{{ nexus_data_dir}}/blobs"
+  register: blobs
+
+- name: Deleting default repositories (only first-time install)
+  include: delete_repo_each.yml
+  with_items:
+    - maven-central
+    - maven-public
+    - maven-releases
+    - maven-snapshots
+    - nuget-group
+    - nuget-hosted
+    - nuget.org-proxy
+  when:
+    - install_binaries is defined
+    - install_binaries
+    - nexus_delete_default_repos
+
+- include: create_cleanup_policies_from_list.yml
+
+- include: setup_ldap.yml
+
+- include: create_blob_store.yml
+
+- include: create_repo_maven_proxy.yml
+
+- include: create_repo_maven_hosted.yml
+
+- include: create_repo_pypi_hosted.yml
+
+- include: create_repo_pypi_proxy.yml
+
+- include: create_repo_npm_group.yml
+
+- include: create_repo_npm_hosted.yml
+
+- include: create_repo_npm_proxy.yml
+
+- include: create_repo_maven_group.yml
+
+- include: create_repo_docker_hosted.yml
+
+- include: create_repo_raw_hosted.yml
+
+- include: create_repo_helm_hosted.yml
+
+- include: create_repo_conan_hosted.yml
+
+- include: create_repo_conan_proxy.yml
+
+- include: update_role_mappings.yml
+
+- include: setup_role.yml
+
+- include: create_task.yml
+
+- include: clean_up_snapshots_task.yml
+
+- include: call_script.yml
+  vars:
+    script_name: setup_realms
+    args: {}

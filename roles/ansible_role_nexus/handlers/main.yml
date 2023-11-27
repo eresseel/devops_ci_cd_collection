@@ -1,0 +1,22 @@
+---
+- name: Start Up Nexus Service
+  service:
+    name: nexus
+    enabled: yes
+    state: started
+
+- name: Restart Nexus Service
+  service:
+    name: nexus
+    enabled: yes
+    state: restarted
+
+- name: Wait for Nexus to start up
+  uri:
+    url: "http://localhost:{{ nexus_port }}"
+    status_code: 200
+  changed_when: false
+  register: result
+  until: result.status == 200
+  retries: "{{ nexus_retries }}"
+  delay: "{{ nexus_delay }}"

@@ -1,0 +1,6 @@
+---
+- include: call_script.yml
+  vars:
+    script_name: create_task
+    args: "{{ item }}"
+  with_items: "{{ nexus_scheduled_tasks }}"

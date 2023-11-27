@@ -1,0 +1,26 @@
+---
+- name: Check if the installation folder exists
+  stat:
+    path: "{{ nexus_home }}"
+  register: nexus
+
+- name: Trigger installation
+  include: install_binaries.yml
+  when:
+    - nexus.stat.isdir is not defined
+
+- name: Install java and Ansible xml module pre-reqs
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - python-lxml
+    - openjdk-8-jre
+    - openjdk-8-jdk
+
+- name: Setup Plugins
+  include: setup_plugins.yml
+
+- name: Fire up nexus
+  include: restart_and_wait_for_it.yml
+  when: install_binaries is defined or setup_plugin is defined

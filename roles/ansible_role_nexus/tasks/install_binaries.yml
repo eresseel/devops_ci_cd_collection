@@ -1,0 +1,93 @@
+---
+- name: Stop previous version of nexus if any
+  service:
+    name: nexus
+    state: stopped
+  ignore_errors: yes
+  register: stop_old_nexus_service
+
+- name: Ensure Service Group Exists
+  group:
+    name: service
+    state: present
+
+- name: Ensure Nexus Service User Exists
+  user:
+    name: nexus
+    comment: 'Nexus repository manager service user'
+    group: service
+
+- name: Ensure Installation Directory Exists
+  file:
+    path: "{{ nexus_installation_dir }}"
+    state: directory
+    group: service
+    owner: nexus
+
+- name: Download Nexus OSS Tarball
+  get_url:
+    url: "{{ nexus_download_url }}/{{ nexus_package }}"
+    dest: "/tmp/{{ nexus_package }}"
+    timeout: "{{ nexus_timeout }}"
+
+- name: Unpack Nexus Package
+  unarchive:
+    src: "/tmp/{{ nexus_package }}"
+    dest: "{{ nexus_installation_dir }}"
+    creates: "{{ nexus_home }}/bin/nexus.rc"
+    group: service
+    owner: nexus
+    mode: 0755
+    remote_src: yes
+
+- name: Configure Nexus To Run as the Service User
+  lineinfile:
+    name: "{{ nexus_home }}/bin/nexus.rc"
+    line: 'run_as_user="nexus"'
+    state: present
+
+- name: Check the Nexus home directory owner
+  stat:
+    path: "{{ nexus_home }}"
+  register: nexus_home_own
+
+- name: Give the Nexus home ownership to the nexus user
+  file:
+    path: "{{ nexus_home }}"
+    owner: nexus
+    group: service
+    recurse: yes
+  when: nexus_home_own.stat.pw_name != 'nexus' or nexus_home_own.stat.gr_name != 'service'
+
+- name: Check the Nexus data directory owner
+  stat:
+    path: "{{ nexus_data_dir }}"
+  register: nexus_data_own
+
+- name: Give the Nexus data directory ownership to the nexus user
+  file:
+    path: "{{ nexus_data_dir }}"
+    owner: nexus
+    group: service
+    recurse: yes
+  when: nexus_data_own.stat.pw_name != 'nexus' or nexus_data_own.stat.gr_name != 'service'
+
+- name: Configure Nexus Home to the nexus user
+  lineinfile:
+    name: /home/nexus/.bashrc
+    line: 'export NEXUS_HOME="{{ nexus_home }}"'
+    state: present
+    create: yes
+
+- name: Link the Nexus Launcher to init.d
+  file:
+    src: "{{ nexus_home }}/bin/nexus"
+    dest: /etc/init.d/nexus
+    owner: root
+    group: root
+    mode: 0755
+    state: link
+
+- name: Set the fact that this is install
+  set_fact:
+    install_binaries: true

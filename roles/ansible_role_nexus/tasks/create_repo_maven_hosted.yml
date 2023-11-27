@@ -1,0 +1,6 @@
+---
+- include: call_script.yml
+  vars:
+    script_name: create_repo_maven_hosted
+    args: "{{ _nexus_repos_maven_defaults|combine(item) }}"
+  with_items: "{{ nexus_repos_maven_hosted }}"

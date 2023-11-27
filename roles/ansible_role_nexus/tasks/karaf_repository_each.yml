@@ -1,0 +1,37 @@
+---
+- name: Ensure the plugin directory exists
+  file:
+    dest: "{{ plugins_path }}/{{ plugin.artifact_id }}/{{ plugin.version }}"
+    recurse: yes
+    state: directory
+
+- name: Copy The Plugin Jar file
+  copy:
+    src: "plugins/{{ plugin.artifact_id }}-{{ plugin.version }}.jar"
+    dest: "{{ plugins_path }}/{{ plugin.artifact_id }}/{{ plugin.version }}"
+    owner: nexus
+    group: service
+    mode: 0775
+
+- name: Check If Karaf Repository is already set
+  xml:
+    path: "{{ nexus_feature_xml }}"
+    xpath: "//nexus-core-feature:feature[.='{{ plugin.artifact_id }}']"
+    namespaces:
+      nexus-core-feature: "{{ nexus_core_feature }}"
+    count: yes
+  register: matches
+
+- name: Set Karaf Repository
+  xml:
+    backup: yes
+    path: "{{ nexus_feature_xml }}"
+    xpath: "//nexus-core-feature:feature[@name='nexus-core-feature']"
+    namespaces:
+      nexus-core-feature: "{{ nexus_core_feature }}"
+    input_type: xml
+    add_children: |
+      <feature prerequisite="false" dependency="false">{{ plugin.artifact_id }}</feature>
+  register: output
+  when:
+    - matches.count == 0

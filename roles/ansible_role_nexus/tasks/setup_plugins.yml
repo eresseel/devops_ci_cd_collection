@@ -1,0 +1,12 @@
+---
+- name: Set Karaf Feature Repositories for Nexus plugins
+  include: karaf_repository_each.yml
+  with_items: "{{ nexus_plugins }}"
+  loop_control:
+    loop_var: plugin
+
+- name: Set Karaf Feature Bundles to enable Nexus plugins
+  include: karaf_bundle_each.yml
+  with_items: "{{ nexus_plugins }}"
+  loop_control:
+    loop_var: plugin

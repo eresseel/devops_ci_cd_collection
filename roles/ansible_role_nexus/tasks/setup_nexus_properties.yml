@@ -1,0 +1,16 @@
+---
+- name: Allow scripts
+  become: true
+  lineinfile:
+    path: "{{ nexus_default_settings_file }}"
+    line: nexus.scripts.allowCreation=true
+  register: allowed
+
+- name: Stop the admin wizard from running
+  lineinfile:
+    path: "{{ nexus_default_settings_file }}"
+    line: nexus.onboarding.enabled=false
+
+- name: Fire up nexus
+  include: restart_and_wait_for_it.yml
+  when: allowed is changed

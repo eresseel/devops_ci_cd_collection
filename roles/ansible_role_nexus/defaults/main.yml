@@ -1,0 +1,85 @@
+---
+nexus_installation_dir: /home/nexus
+nexus_retries: 60
+nexus_delay: 30
+nexus_timeout: 360
+nexus_script_timeout: 60
+nexus_port: 8081
+nexus_download_url: http://download.sonatype.com/nexus/3
+nexus_version: 3.21.2-03
+nexus_package: "nexus-{{ nexus_version }}-unix.tar.gz"
+nexus_feature_xml: "{{ nexus_installation_dir }}/nexus-{{ nexus_version }}/system/org/sonatype/nexus/assemblies/nexus-core-feature/{{ nexus_version }}/nexus-core-feature-{{ nexus_version }}-features.xml"
+nexus_admin_user: "{{ nexus_default_admin_user }}"
+nexus_admin_pw: "{{ nexus_default_admin_pw | default('admin123')}}"
+plugins_path: "{{ nexus_installation_dir }}/nexus-{{ nexus_version }}/system/org/sonatype/nexus/plugins"
+
+nexus_delete_default_repos: true
+nexus_ldap_connections: []
+
+nexus_roles: []
+nexus_core_feature: 'http://karaf.apache.org/xmlns/features/v1.6.0'
+nexus_user_role_mappings: []
+nexus_blob_stores: []
+nexus_repos_maven_proxy: []
+nexus_repos_maven_hosted: []
+nexus_repos_docker_hosted: []
+nexus_repos_maven_group: []
+nexus_repos_raw_hosted: []
+nexus_repos_pypi_hosted: []
+nexus_repos_pypi_group: []
+nexus_repos_pypi_proxy: []
+nexus_repos_npm_hosted: []
+nexus_repos_npm_group: []
+nexus_repos_npm_proxy: []
+nexus_repos_helm_hosted: []
+nexus_repos_conan_hosted: []
+nexus_repos_conan_proxy: []
+nexus_scheduled_tasks: []
+nexus_maven_snapshots_cleanup_tasks: []
+nexus_repos_cleanup_policies: []
+
+_nexus_repos_maven_defaults:
+  blob_store: default  # Note : cannot be updated once the repo has been created
+  strict_content_validation: true
+  version_policy: release  # release, snapshot or mixed
+  layout_policy: strict  # strict or permissive
+  write_policy: allow_once  # allow_once or allow
+  content_max_age: 1440
+  metadata_max_age: 1440
+  time_to_live: 1440
+_nexus_repos_docker_defaults:
+  blob_store: default  # Note : cannot be updated once the repo has been created
+  strict_content_validation: true
+  write_policy: allow_once  # allow_once or allow
+_nexus_repos_raw_defaults:
+  blob_store: default  # Note : cannot be updated once the repo has been created
+  strict_content_validation: true
+  version_policy: release  # release, snapshot or mixed
+  layout_policy: strict  # strict or permissive
+  write_policy: allow_once  # allow_once or allow
+_nexus_repos_pypi_defaults:
+  blob_store: default
+  strict_content_validation: true
+  version_policy: release  # release, snapshot or mixed
+  layout_policy: strict  # strict or permissive
+  write_policy: allow_once  # one of "allow", "allow_once" or "deny"
+  maximum_component_age: 1440  # Nexus gui default. For proxies only
+  maximum_metadata_age: 1440  # Nexus gui default. For proxies only
+  negative_cache_enabled: true  # Nexus gui default. For proxies only
+  negative_cache_ttl: 1440  # Nexus gui default. For proxies only
+_nexus_repos_npm_defaults:
+  blob_store: default
+  strict_content_validation: true
+  write_policy: allow_once  # one of "allow", "allow_once" or "deny"
+  maximum_component_age: 1440  # Nexus gui default. For proxies only
+  maximum_metadata_age: 1440  # Nexus gui default. For proxies only
+  negative_cache_enabled: true  # Nexus gui default. For proxies only
+  negative_cache_ttl: 1440  # Nexus gui default. For proxies only
+_nexus_repos_helm_defaults:
+  blob_store: default  # Note : cannot be updated once the repo has been created
+  strict_content_validation: true
+  write_policy: allow_once  # allow_once or allow
+_nexus_repos_conan_defaults:
+  blob_store: default  # Note : cannot be updated once the repo has been created
+  strict_content_validation: true
+  write_policy: allow_once  # allow_once or allow

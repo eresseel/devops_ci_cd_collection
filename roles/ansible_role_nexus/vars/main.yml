@@ -1,0 +1,15 @@
+---
+# vars file for nexus
+nexus_home: "{{ nexus_installation_dir }}/nexus-{{ nexus_version }}"
+nexus_data_dir: "{{ nexus_installation_dir }}/sonatype-work/nexus3"
+nexus_default_admin_user: 'admin'
+nexus_default_admin_pw: 'admin123'
+nexus_default_settings_file: "{{ nexus_data_dir }}/etc/nexus.properties"
+
+nexus_plugins:
+  - artifact_id: 'nexus-repository-helm'
+    version: '0.0.6'
+    group_id: 'org.sonatype.nexus.plugins'
+  - artifact_id: 'nexus-repository-conan'
+    version: '0.0.6-SNAPSHOT'
+    group_id: 'org.sonatype.repository'
