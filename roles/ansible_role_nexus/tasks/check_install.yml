@@ -9,14 +9,9 @@
   when:
     - nexus.stat.isdir is not defined
 
-- name: Install java and Ansible xml module pre-reqs
-  apt:
-    name: "{{ item }}"
-    state: present
-  with_items:
-    - python-lxml
-    - openjdk-8-jre
-    - openjdk-8-jdk
+- name: Install lxml package
+  ansible.builtin.pip:
+    name: lxml
 
 - name: Setup Plugins
   include: setup_plugins.yml
